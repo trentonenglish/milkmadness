@@ -739,83 +739,6 @@ class Game {
         this.ctx.restore();
     }
     
-    // Draw floor (info box)
-    drawFloor() {
-        // Draw semi-transparent info box
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        this.ctx.fillRect(0, this.floorY, this.canvas.width, this.infoBoxHeight);
-        
-        // Add border at the top
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        this.ctx.fillRect(0, this.floorY, this.canvas.width, 2);
-        
-        // Draw info box content
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'top';
-        
-        // Title for the info box
-        this.ctx.fillText('Game Stats', this.infoBoxPadding, this.floorY + this.infoBoxPadding);
-        
-        // Draw game statistics
-        this.ctx.font = '14px Arial';
-        
-        // Left column
-        const leftStats = [
-            `Score: ${this.score}`,
-            `Lives: ${this.lives}`,
-            `Streak: ${this.streak}`,
-            `Highest Streak: ${this.stats.highestStreak}`
-        ];
-        
-        // Right column
-        const rightStats = [
-            `Milk Collected: ${this.stats.milkCollected}`,
-            `Whisks Passed: ${this.stats.whisksPassed}`,
-            `Powerups: ${this.stats.powerupsCollected}`,
-            `Time: ${this.stats.timeElapsed.toFixed(1)}s`
-        ];
-        
-        // Draw left column
-        leftStats.forEach((text, index) => {
-            this.ctx.fillText(
-                text, 
-                this.infoBoxPadding, 
-                this.floorY + this.infoBoxPadding * 2 + index * 20
-            );
-        });
-        
-        // Draw right column
-        rightStats.forEach((text, index) => {
-            this.ctx.fillText(
-                text, 
-                this.canvas.width / 2, 
-                this.floorY + this.infoBoxPadding * 2 + index * 20
-            );
-        });
-        
-        // Draw active powerups
-        if (this.activePowerup || this.slowMotion || this.shieldActive) {
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.fillText('Active Powerups:', this.infoBoxPadding, this.floorY + this.infoBoxPadding * 2 + 4 * 20);
-            
-            this.ctx.font = '14px Arial';
-            let activePowerups = [];
-            
-            if (this.activePowerup === 'multiplier') activePowerups.push('2x Points');
-            if (this.activePowerup === 'magnet') activePowerups.push('Milk Magnet');
-            if (this.slowMotion) activePowerups.push('Slow Motion');
-            if (this.shieldActive) activePowerups.push('Shield');
-            
-            this.ctx.fillText(
-                activePowerups.join(', ') || 'None', 
-                this.infoBoxPadding, 
-                this.floorY + this.infoBoxPadding * 2 + 5 * 20
-            );
-        }
-    }
-    
     // Draw background
     drawBackground() {
         if (this.backgroundLoaded) {
@@ -1350,72 +1273,161 @@ class Game {
         // Reset game
         this.resetGame();
         
+        // Start the game when assets are loaded
+        ASSETS.loadAssets(() => {
+            console.log('All assets loaded, ready to start');
+            // Show the menu initially
+            this.state = GAME_STATES.MENU;
+            // Start the game loop
+            this.lastFrameTime = performance.now();
+            this.gameLoop(this.lastFrameTime);
+        });
+    }
+    
+    // Start the game
+    startGame() {
+        // Reset game state
+        this.resetGame();
+        
         // Set game state to playing
         this.state = GAME_STATES.PLAYING;
         
-        // Start game loop
-        this.lastFrameTime = performance.now();
-        
-        // Use setTimeout to ensure this is properly bound
-        const self = this;
-        setTimeout(() => {
-            self.gameLoop(self.lastFrameTime);
-        }, 0);
-        
-        // Play background music - with error handling
+        // Play background music
         try {
-            if (ASSETS && ASSETS.playSound) {
-                ASSETS.playSound('bgMusic', true);
-            }
-        } catch (error) {
-            console.log('Background music could not be played:', error);
+            ASSETS.playSound('bgMusic', 0.5, true);
+        } catch (e) {
+            console.error('Error playing background music:', e);
         }
     }
     
     // Game loop
     gameLoop(timestamp) {
-        try {
-            // Calculate delta time
-            const deltaTime = timestamp ? timestamp - this.lastFrameTime : 16.67; // Default to ~60fps if timestamp is undefined
-            this.lastFrameTime = timestamp || performance.now();
-            
-            // Clear canvas
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            
-            // Draw background
+        // Calculate delta time
+        const now = timestamp;
+        const deltaTime = now - this.lastFrameTime;
+        this.lastFrameTime = now;
+        
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Apply screen shake effect
+        if (this.screenShake > 0) {
+            const shakeX = (Math.random() - 0.5) * this.screenShake;
+            const shakeY = (Math.random() - 0.5) * this.screenShake;
+            this.ctx.save();
+            this.ctx.translate(shakeX, shakeY);
+            this.screenShake *= 0.9; // Reduce shake over time
+            if (this.screenShake < 0.5) this.screenShake = 0;
+        }
+        
+        // Update and draw based on game state
+        if (this.state === GAME_STATES.PLAYING) {
+            this.update(deltaTime);
+            this.draw();
+        } else if (this.state === GAME_STATES.MENU) {
             this.drawBackground();
+            this.drawMenu();
+        } else if (this.state === GAME_STATES.GAME_OVER) {
+            this.drawBackground();
+            this.drawGameOver();
+        } else if (this.state === GAME_STATES.PAUSED) {
+            this.drawBackground();
+            this.drawPaused();
+        }
+        
+        // Draw flash effect
+        if (this.flashEffect > 0) {
+            this.ctx.fillStyle = this.flashColor;
+            this.ctx.globalAlpha = this.flashEffect;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.globalAlpha = 1;
+            this.flashEffect *= 0.9; // Reduce flash over time
+            if (this.flashEffect < 0.05) this.flashEffect = 0;
+        }
+        
+        // Restore context if screen shake was applied
+        if (this.screenShake > 0) {
+            this.ctx.restore();
+        }
+        
+        // Request next frame
+        this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
+    }
+    
+    // Draw floor (info box)
+    drawFloor() {
+        // Draw semi-transparent info box
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        this.ctx.fillRect(0, this.floorY, this.canvas.width, this.infoBoxHeight);
+        
+        // Add border at the top
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.fillRect(0, this.floorY, this.canvas.width, 2);
+        
+        // Draw info box content
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'top';
+        
+        // Title for the info box
+        this.ctx.fillText('Game Stats', this.infoBoxPadding, this.floorY + this.infoBoxPadding);
+        
+        // Draw game statistics
+        this.ctx.font = '14px Arial';
+        
+        // Left column
+        const leftStats = [
+            `Score: ${this.score}`,
+            `Lives: ${this.lives}`,
+            `Streak: ${this.streak}`,
+            `Highest Streak: ${this.stats.highestStreak}`
+        ];
+        
+        // Right column
+        const rightStats = [
+            `Milk Collected: ${this.stats.milkCollected}`,
+            `Whisks Passed: ${this.stats.whisksPassed}`,
+            `Powerups: ${this.stats.powerupsCollected}`,
+            `Time: ${this.stats.timeElapsed.toFixed(1)}s`
+        ];
+        
+        // Draw left column
+        leftStats.forEach((text, index) => {
+            this.ctx.fillText(
+                text, 
+                this.infoBoxPadding, 
+                this.floorY + this.infoBoxPadding * 2 + index * 20
+            );
+        });
+        
+        // Draw right column
+        rightStats.forEach((text, index) => {
+            this.ctx.fillText(
+                text, 
+                this.canvas.width / 2, 
+                this.floorY + this.infoBoxPadding * 2 + index * 20
+            );
+        });
+        
+        // Draw active powerups
+        if (this.activePowerup || this.slowMotion || this.shieldActive) {
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.fillText('Active Powerups:', this.infoBoxPadding, this.floorY + this.infoBoxPadding * 2 + 4 * 20);
             
-            // Update and draw based on game state
-            if (this.state === GAME_STATES.PLAYING) {
-                // Update game state
-                this.update();
-                
-                // Draw game objects
-                this.draw();
-            } else if (this.state === GAME_STATES.MENU) {
-                // Draw menu
-                this.drawMenu();
-            } else if (this.state === GAME_STATES.GAME_OVER) {
-                // Draw game over screen
-                this.drawGameOver();
-            }
+            this.ctx.font = '14px Arial';
+            let activePowerups = [];
             
-            // Continue game loop
-            this.animationFrameId = requestAnimationFrame((t) => {
-                if (this && typeof this.gameLoop === 'function') {
-                    this.gameLoop(t);
-                }
-            });
-        } catch (error) {
-            console.error('Error in game loop:', error.message || error);
-            console.error('Error stack:', error.stack || 'No stack trace available');
+            if (this.activePowerup === 'multiplier') activePowerups.push('2x Points');
+            if (this.activePowerup === 'magnet') activePowerups.push('Milk Magnet');
+            if (this.slowMotion) activePowerups.push('Slow Motion');
+            if (this.shieldActive) activePowerups.push('Shield');
             
-            // Try to recover and continue more safely
-            setTimeout(() => {
-                if (this && typeof this.gameLoop === 'function') {
-                    this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
-                }
-            }, 1000); // Wait a second before trying again
+            this.ctx.fillText(
+                activePowerups.join(', ') || 'None', 
+                this.infoBoxPadding, 
+                this.floorY + this.infoBoxPadding * 2 + 5 * 20
+            );
         }
     }
 }

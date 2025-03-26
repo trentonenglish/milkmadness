@@ -10,11 +10,11 @@ const ASSETS = {
     
     // Load all game assets
     loadAssets(callback) {
-        // Define image assets
+        // Define image assets with both lowercase and uppercase paths for fallback
         const imageAssets = {
-            'cookie': 'Images/choco chip (1).png',
-            'defender': 'Images/monster 1.png',
-            'logo': 'Images/Logo Mark Color (3).png'
+            'cookie': ['images/choco chip (1).png', 'Images/choco chip (1).png'],
+            'defender': ['images/monster 1.png', 'Images/monster 1.png'],
+            'logo': ['images/Logo Mark Color (3).png', 'Images/Logo Mark Color (3).png']
         };
         
         // Define sound assets with paths to the sound files
@@ -29,125 +29,101 @@ const ASSETS = {
             'bgMusic': 'sounds/bgMusic.mp3'
         };
         
-        // Count total assets to load
+        // Set total assets to load
         this.totalAssets = Object.keys(imageAssets).length + Object.keys(soundAssets).length;
-        this.loadedAssets = 0;
         
-        console.log(`Loading ${this.totalAssets} assets...`);
-        
-        // Load images
-        for (const [key, src] of Object.entries(imageAssets)) {
-            this.loadImage(key, src);
+        // Load image assets
+        for (const key in imageAssets) {
+            this.loadImage(key, imageAssets[key]);
         }
         
-        // Load sounds
-        for (const [key, src] of Object.entries(soundAssets)) {
-            this.loadSound(key, src);
+        // Load sound assets
+        for (const key in soundAssets) {
+            this.loadSound(key, soundAssets[key]);
         }
         
         // Check if all assets are loaded
-        const checkInterval = setInterval(() => {
-            if (this.loadedAssets >= this.totalAssets) {
-                clearInterval(checkInterval);
-                console.log('All assets loaded');
+        const checkAllLoaded = () => {
+            if (this.loadedAssets === this.totalAssets) {
                 callback();
+            } else {
+                setTimeout(checkAllLoaded, 100);
             }
-        }, 100);
+        };
+        
+        // Start checking
+        checkAllLoaded();
     },
     
-    // Load image asset
-    loadImage(key, src) {
-        console.log(`Loading image: ${src}`);
+    // Load an image asset with fallback paths
+    loadImage(key, paths) {
         const img = new Image();
         
-        img.onload = () => {
-            console.log(`Image loaded: ${src}`);
-            this.loadedAssets++;
-        };
-        
+        // Try to load the first path, fall back to the second if it fails
         img.onerror = () => {
-            console.error(`Failed to load image: ${src}`);
-            this.loadedAssets++;
+            if (Array.isArray(paths) && paths.length > 1) {
+                console.log(`Failed to load ${paths[0]}, trying ${paths[1]}`);
+                img.src = paths[1];
+            } else {
+                console.error(`Failed to load image: ${paths}`);
+                this.loadedAssets++;
+            }
         };
         
-        img.src = src;
-        this.images[key] = img;
+        img.onload = () => {
+            this.images[key] = img;
+            this.loadedAssets++;
+            console.log(`Loaded image: ${key}`);
+        };
+        
+        // Start loading the image
+        img.src = Array.isArray(paths) ? paths[0] : paths;
     },
     
-    // Load sound asset
+    // Load a sound asset
     loadSound(key, src) {
-        console.log(`Loading sound: ${src}`);
-        const sound = new Audio();
+        const audio = new Audio();
         
-        sound.addEventListener('canplaythrough', () => {
-            console.log(`Sound loaded: ${src}`);
+        audio.addEventListener('canplaythrough', () => {
+            this.sounds[key] = audio;
             this.loadedAssets++;
+            console.log(`Loaded sound: ${key}`);
         }, { once: true });
         
-        sound.addEventListener('error', () => {
-            console.error(`Failed to load sound: ${src}. Creating empty audio object.`);
-            // Still count as loaded to avoid blocking the game
+        audio.addEventListener('error', () => {
+            console.error(`Failed to load sound: ${src}`);
             this.loadedAssets++;
         });
         
-        // Set a timeout in case the sound file doesn't trigger any events
-        setTimeout(() => {
-            if (!this.sounds[key] || this.sounds[key] !== sound) {
-                console.warn(`Sound loading timed out: ${src}`);
-                this.loadedAssets++;
-            }
-        }, 3000);
-        
-        // Try to load the sound
-        try {
-            sound.src = src;
-            this.sounds[key] = sound;
-        } catch (e) {
-            console.error(`Error setting sound source: ${e.message}`);
-            this.sounds[key] = new Audio(); // Create empty audio object
-            this.loadedAssets++;
-        }
+        audio.src = src;
+        audio.load();
     },
     
     // Play sound
-    playSound(key, loop = false) {
-        if (!this.sounds[key]) {
-            console.warn(`Sound not found: ${key}`);
-            return null;
-        }
-        
-        try {
-            // Create a new instance for overlapping sounds
-            const sound = this.sounds[key].cloneNode();
+    playSound(key, volume = 1.0, loop = false) {
+        if (this.sounds[key]) {
+            const sound = this.sounds[key];
+            sound.currentTime = 0;
+            sound.volume = volume;
             sound.loop = loop;
-            sound.volume = 0.5; // Set a reasonable volume
             
-            // Play the sound
+            // Create a promise that resolves when the sound ends
             const playPromise = sound.play();
             
-            // Handle play promise (might be rejected if user hasn't interacted with the page)
+            // Handle play errors
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    console.warn(`Sound play failed (${key}): ${error}`);
+                    console.error(`Error playing sound ${key}:`, error);
                 });
             }
-            
-            return sound;
-        } catch (e) {
-            console.error(`Error playing sound ${key}: ${e.message}`);
-            return null;
         }
     },
     
     // Stop sound
-    stopSound(sound) {
-        if (sound && typeof sound.pause === 'function') {
-            try {
-                sound.pause();
-                sound.currentTime = 0;
-            } catch (e) {
-                console.error(`Error stopping sound: ${e.message}`);
-            }
+    stopSound(key) {
+        if (this.sounds[key]) {
+            this.sounds[key].pause();
+            this.sounds[key].currentTime = 0;
         }
     },
     
