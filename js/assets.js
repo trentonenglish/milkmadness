@@ -51,6 +51,8 @@ const ASSETS = {
             ]
         };
         
+        console.log('Cookie image paths to try:', JSON.stringify(imageAssets.cookie));
+        
         // Define sound assets with paths to the sound files
         const soundAssets = {
             'flap': `${baseUrl}sounds/flap.mp3`,
@@ -97,24 +99,24 @@ const ASSETS = {
         
         const tryNextPath = () => {
             if (pathIndex >= paths.length) {
-                console.error(`Failed to load image ${key} after trying all paths`);
+                console.error(`All paths failed for image: ${key}`);
                 this.loadedAssets++;
                 return;
             }
             
             const src = paths[pathIndex];
-            console.log(`Trying path ${pathIndex + 1}/${paths.length}: ${src}`);
+            console.log(`Trying path ${pathIndex + 1}/${paths.length} for ${key}: ${src}`);
             img.src = src;
             pathIndex++;
         };
         
         img.onload = () => {
-            console.log(`Image loaded: ${key} from ${img.src}`);
+            console.log(`Image loaded successfully: ${key} from ${img.src}`);
             this.loadedAssets++;
         };
         
         img.onerror = () => {
-            console.error(`Failed to load image: ${img.src}, trying next path...`);
+            console.error(`Failed to load image: ${key} from ${img.src}, trying next path...`);
             tryNextPath();
         };
         
@@ -203,7 +205,12 @@ const ASSETS = {
     
     // Draw cookie
     drawCookie(ctx, x, y, width, height, rotation = 0) {
-        if (!this.images.cookie) {
+        if (!this.images.cookie || !this.images.cookie.complete) {
+            console.log('Cookie image not loaded or not complete, using fallback drawing');
+            console.log('Cookie image status:', this.images.cookie ? 
+                        `Exists but complete=${this.images.cookie.complete}, src=${this.images.cookie.src}` : 
+                        'Does not exist');
+            
             // Fallback drawing if image isn't loaded
             ctx.fillStyle = '#F5DEB3'; // Wheat color
             ctx.beginPath();
@@ -223,6 +230,9 @@ const ASSETS = {
             }
             return;
         }
+        
+        // Log the cookie image being used
+        console.log('Drawing cookie with image:', this.images.cookie.src);
         
         // Draw the cookie image
         ctx.drawImage(this.images.cookie, x, y, width, height);

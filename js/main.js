@@ -14,6 +14,34 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
+    // Preload critical SVG images
+    const preloadSVGs = () => {
+        console.log('Preloading SVG images...');
+        const svgImages = [
+            'Images/Untitled-2.svg',
+            'Images/Logo Mark Color (3).svg',
+            'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.svg'
+        ];
+        
+        // Create and append hidden image elements to force browser to load them
+        svgImages.forEach(src => {
+            const img = new Image();
+            img.src = src;
+            img.style.position = 'absolute';
+            img.style.opacity = '0';
+            img.style.pointerEvents = 'none';
+            img.style.width = '1px';
+            img.style.height = '1px';
+            document.body.appendChild(img);
+            
+            img.onload = () => console.log(`Preloaded SVG: ${src}`);
+            img.onerror = () => console.error(`Failed to preload SVG: ${src}`);
+        });
+    };
+    
+    // Preload SVGs before creating game instance
+    preloadSVGs();
+    
     // Create game instance with canvas
     const game = new Game(canvas);
     

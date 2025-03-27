@@ -164,13 +164,24 @@ class Player {
         // Apply scale for animation
         ctx.scale(this.scale, this.scale);
         
-        // Draw cookie centered
-        ASSETS.drawCookie(
-            ctx,
-            -this.width / 2, -this.height / 2,
-            this.width, this.height,
-            0 // No additional rotation needed since we're using ctx.rotate
-        );
+        // Try to load the SVG image directly if the ASSETS method fails
+        const cookieImage = ASSETS.images.cookie;
+        if (cookieImage && cookieImage.complete) {
+            // Draw the cookie image centered
+            ctx.drawImage(
+                cookieImage,
+                -this.width / 2, -this.height / 2,
+                this.width, this.height
+            );
+        } else {
+            // Fallback to ASSETS.drawCookie method
+            ASSETS.drawCookie(
+                ctx,
+                -this.width / 2, -this.height / 2,
+                this.width, this.height,
+                this.rotation
+            );
+        }
         
         ctx.restore();
     }
