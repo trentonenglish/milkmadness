@@ -20,10 +20,10 @@ const ASSETS = {
         // Define image assets with fallback paths
         const imageAssets = {
             'cookie': [
-                `${baseUrl}Images/choco chip (1).png`, 
-                `${baseUrl}images/choco chip (1).png`,
-                'Images/choco chip (1).png', 
-                'images/choco chip (1).png'
+                `${baseUrl}Images/Untitled-2.svg`, 
+                `${baseUrl}images/Untitled-2.svg`,
+                'Images/Untitled-2.svg', 
+                'images/Untitled-2.svg'
             ],
             'defender': [
                 `${baseUrl}Images/monster 1.png`, 

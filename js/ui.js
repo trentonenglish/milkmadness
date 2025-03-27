@@ -52,7 +52,7 @@ const UI = {
             if (cookieIcon) {
                 cookieIcon.innerHTML = '';
                 const cookieImg = document.createElement('img');
-                cookieImg.src = 'Images/choco chip (1).png';
+                cookieImg.src = 'Images/Untitled-2.svg';
                 cookieImg.alt = 'Cookie';
                 cookieImg.style.width = '40px';
                 cookieImg.style.height = '40px';
