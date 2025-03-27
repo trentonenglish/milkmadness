@@ -49,6 +49,7 @@ class Game {
         
         // Background
         this.backgroundLoaded = false;
+        this.backgroundImage = null;
         
         // Particles
         this.particles = new ParticleSystem();
@@ -622,62 +623,40 @@ class Game {
     
     // Draw game
     draw() {
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Apply screen shake effect
-        if (this.screenShake > 0) {
-            const shakeX = (Math.random() - 0.5) * this.screenShake;
-            const shakeY = (Math.random() - 0.5) * this.screenShake;
-            this.ctx.save();
-            this.ctx.translate(shakeX, shakeY);
-        }
-        
-        // Draw background
-        this.drawBackground();
-        
-        // Draw game objects
-        this.drawGameObjects();
-        
-        // Draw particles
-        this.particles.draw(this.ctx);
-        
-        // Draw floor (info box)
-        this.drawFloor();
-        
-        // Draw UI
-        this.drawUI();
-        
-        // Draw powerup status if active
-        if (this.activePowerup) {
-            this.drawPowerupStatus();
-        }
-        
-        // Draw shield effect if active
-        if (this.shieldActive) {
-            this.drawShieldEffect();
-        }
-        
-        // Draw flash effect
-        if (this.flashEffect > 0) {
-            this.ctx.fillStyle = this.flashColor;
-            this.ctx.globalAlpha = this.flashEffect;
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.globalAlpha = 1;
-        }
-        
-        // Restore context if screen shake was applied
-        if (this.screenShake > 0) {
-            this.ctx.restore();
-        }
-        
-        // Draw game state overlays
-        if (this.state === GAME_STATES.MENU) {
-            this.drawMenu();
-        } else if (this.state === GAME_STATES.GAME_OVER) {
-            this.drawGameOver();
-        } else if (this.state === GAME_STATES.PAUSED) {
-            this.drawPaused();
+        try {
+            // Clear canvas
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Draw background
+            this.drawBackground();
+            
+            // Apply screen shake effect
+            if (this.screenShake > 0) {
+                const shakeX = (Math.random() - 0.5) * this.screenShake;
+                const shakeY = (Math.random() - 0.5) * this.screenShake;
+                this.ctx.translate(shakeX, shakeY);
+                this.screenShake *= 0.9; // Decay
+                if (this.screenShake < 0.5) this.screenShake = 0;
+            }
+            
+            // Draw game objects
+            this.drawGameObjects();
+            
+            // Draw UI
+            this.drawUI();
+            
+            // Draw flash effect
+            if (this.flashEffect > 0) {
+                this.ctx.fillStyle = this.flashColor;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.flashEffect *= 0.9; // Decay
+                if (this.flashEffect < 0.05) this.flashEffect = 0;
+            }
+            
+            // Reset transformations
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        } catch (error) {
+            console.error('Error in draw method:', error.message || error);
         }
     }
     
@@ -843,41 +822,87 @@ class Game {
     
     // Draw background
     drawBackground() {
-        // Draw static background
-        const backgroundImage = ASSETS.getBackgroundImage();
-        
-        if (backgroundImage && backgroundImage.complete) {
-            this.backgroundLoaded = true;
+        try {
+            // Get the background image from assets
+            if (!this.backgroundImage) {
+                this.backgroundImage = ASSETS.getBackgroundImage();
+            }
             
-            // Draw the background image to fill the canvas
-            this.ctx.drawImage(
-                backgroundImage,
-                0, 0,
-                this.canvas.width, this.canvas.height
-            );
-        } else {
-            // Fallback background if image not loaded
-            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-            gradient.addColorStop(0, '#87CEEB'); // Sky blue
-            gradient.addColorStop(1, '#E0F7FA'); // Light cyan
-            this.ctx.fillStyle = gradient;
+            if (this.backgroundImage && this.backgroundImage.complete) {
+                // Draw the background image to fill the canvas
+                this.ctx.drawImage(
+                    this.backgroundImage,
+                    0, 0,
+                    this.canvas.width, this.canvas.height
+                );
+                this.backgroundLoaded = true;
+            } else {
+                // Fallback background if image not loaded
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                gradient.addColorStop(0, '#87CEEB'); // Sky blue
+                gradient.addColorStop(1, '#E0F7FA'); // Light cyan
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        } catch (error) {
+            console.error('Error drawing background:', error.message || error);
+            
+            // Emergency fallback
+            this.ctx.fillStyle = '#87CEEB';
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
     // Draw game objects
     drawGameObjects() {
-        // Draw player with magnet effect if active
-        this.drawPlayer();
-        
-        // Draw milk glasses
-        this.milkGlasses.forEach(milkGlass => milkGlass.draw(this.ctx));
-        
-        // Draw whisks
-        this.whisks.forEach(whisk => whisk.draw(this.ctx));
-        
-        // Draw powerups
-        this.powerups.forEach(powerup => powerup.draw(this.ctx));
+        try {
+            // Draw particles
+            this.particles.draw(this.ctx);
+            
+            // Draw milk glasses
+            for (const milkGlass of this.milkGlasses) {
+                milkGlass.draw(this.ctx);
+            }
+            
+            // Draw whisks
+            for (const whisk of this.whisks) {
+                whisk.draw(this.ctx);
+            }
+            
+            // Draw powerups
+            for (const powerup of this.powerups) {
+                powerup.draw(this.ctx);
+            }
+            
+            // Draw player
+            if (this.player) {
+                this.drawPlayer();
+            }
+            
+            // Draw floor (info box)
+            this.drawFloor();
+            
+            // Draw powerup status if active
+            if (this.activePowerup) {
+                this.drawPowerupStatus();
+            }
+            
+            // Draw shield effect if active
+            if (this.shieldActive) {
+                this.drawShieldEffect();
+            }
+            
+            // Draw game state overlays
+            if (this.state === GAME_STATES.MENU) {
+                this.drawMenu();
+            } else if (this.state === GAME_STATES.GAME_OVER) {
+                this.drawGameOver();
+            } else if (this.state === GAME_STATES.PAUSED) {
+                this.drawPaused();
+            }
+        } catch (error) {
+            console.error('Error in drawGameObjects method:', error.message || error);
+        }
     }
     
     // Draw player with magnet effect if active
