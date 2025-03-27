@@ -43,27 +43,7 @@ const UI = {
             console.error('Tutorial overlay element not found!');
         }
         
-        // Add logo to tutorial if available
-        if (ASSETS.images['logo'] && ASSETS.images['logo'].complete) {
-            console.log('Adding logo to tutorial...');
-            const logoImg = document.createElement('img');
-            logoImg.src = 'Images/Logo Mark Color (3).png';
-            logoImg.alt = 'Cookie Dunk Showdown Logo';
-            logoImg.style.width = '150px';
-            logoImg.style.height = 'auto';
-            logoImg.style.margin = '0 auto 20px';
-            logoImg.style.display = 'block';
-            
-            // Add logo at the top of tutorial content
-            if (this.elements.tutorialContent) {
-                this.elements.tutorialContent.insertBefore(logoImg, this.elements.tutorialContent.firstChild);
-                console.log('Logo added to tutorial content');
-            } else {
-                console.error('Tutorial content element not found!');
-            }
-        } else {
-            console.warn('Logo image not loaded or not available');
-        }
+        // Logo is now added directly in HTML, no need to add it programmatically
         
         // Replace cookie icon with actual cookie image if available
         if (ASSETS.images['cookie'] && ASSETS.images['cookie'].complete) {
