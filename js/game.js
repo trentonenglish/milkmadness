@@ -1385,46 +1385,287 @@ class Game {
     gameLoop(timestamp) {
         try {
             // Calculate delta time
-            const deltaTime = timestamp ? timestamp - this.lastFrameTime : 16.67; // Default to ~60fps if timestamp is undefined
-            this.lastFrameTime = timestamp || performance.now();
+            if (!this.lastFrameTime) {
+                this.lastFrameTime = timestamp;
+            }
+            const deltaTime = timestamp - this.lastFrameTime;
+            this.lastFrameTime = timestamp;
             
-            // Clear canvas
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            // Check if we should skip this frame (for mobile performance)
+            // Target 30fps on mobile, 60fps on desktop
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const targetFrameTime = isMobile ? 33 : 16; // 30fps or 60fps
             
-            // Draw background
-            this.drawBackground();
-            
-            // Update and draw based on game state
-            if (this.state === GAME_STATES.PLAYING) {
-                // Update game state
-                this.update();
-                
-                // Draw game objects
-                this.draw();
-            } else if (this.state === GAME_STATES.MENU) {
-                // Draw menu
-                this.drawMenu();
-            } else if (this.state === GAME_STATES.GAME_OVER) {
-                // Draw game over screen
-                this.drawGameOver();
+            if (deltaTime < targetFrameTime * 0.8) {
+                // Running too fast, request next frame and return
+                this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
+                return;
             }
             
-            // Continue game loop
-            this.animationFrameId = requestAnimationFrame((t) => {
-                if (this && typeof this.gameLoop === 'function') {
-                    this.gameLoop(t);
-                }
-            });
+            // Update game state
+            if (!this.paused) {
+                this.update();
+            }
+            
+            // Draw game
+            this.draw();
+            
+            // Request next frame
+            this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
         } catch (error) {
             console.error('Error in game loop:', error.message || error);
-            console.error('Error stack:', error.stack || 'No stack trace available');
+            // Continue the game loop even if there's an error
+            this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
+        }
+    }
+    
+    // Update game state
+    update() {
+        try {
+            // Skip update if game is not started
+            if (this.state !== GAME_STATES.PLAYING) {
+                return;
+            }
             
-            // Try to recover and continue more safely
-            setTimeout(() => {
-                if (this && typeof this.gameLoop === 'function') {
-                    this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
+            // Detect if running on mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Update player
+            if (this.player) {
+                this.player.update();
+                
+                // Keep player within bounds
+                if (this.player.y < 0) {
+                    this.player.y = 0;
+                    this.player.velocity.y = 0;
+                } else if (this.player.y + this.player.height > this.floorY) {
+                    this.player.y = this.floorY - this.player.height;
+                    this.player.velocity.y = 0;
                 }
-            }, 1000); // Wait a second before trying again
+            }
+            
+            // Update milk glasses
+            for (let i = this.milkGlasses.length - 1; i >= 0; i--) {
+                const milkGlass = this.milkGlasses[i];
+                
+                // Update milk glass
+                if (!milkGlass.update()) {
+                    // Remove if off screen
+                    this.milkGlasses.splice(i, 1);
+                    continue;
+                }
+                
+                // Check for milk magnet
+                if (this.milkMagnet && this.player) {
+                    const dx = this.player.x - milkGlass.x;
+                    const dy = this.player.y - milkGlass.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // If within magnet range, move toward player
+                    if (distance < 150) {
+                        // Create magnetic effect (less particles on mobile)
+                        if (!isMobile || Math.random() < 0.3) {
+                            this.createMagneticEffect(
+                                milkGlass.x + milkGlass.width / 2,
+                                milkGlass.y + milkGlass.height / 2,
+                                this.player.x + this.player.width / 2,
+                                this.player.y + this.player.height / 2
+                            );
+                        }
+                        
+                        // Move toward player
+                        const speed = 5;
+                        const angle = Math.atan2(dy, dx);
+                        milkGlass.x += Math.cos(angle) * speed;
+                        milkGlass.y += Math.sin(angle) * speed;
+                    }
+                }
+                
+                // Check collision with player
+                if (this.player && this.checkCollision(this.player, milkGlass)) {
+                    // Increment score
+                    this.score += 10 * this.pointMultiplier;
+                    
+                    // Increment streak
+                    this.streak++;
+                    
+                    // Update highest streak
+                    if (this.streak > this.stats.highestStreak) {
+                        this.stats.highestStreak = this.streak;
+                    }
+                    
+                    // Update milk collected stat
+                    this.stats.milkCollected++;
+                    
+                    // Create splash effect (fewer particles on mobile)
+                    const particleCount = isMobile ? 10 : 20;
+                    this.particles.createSplash(
+                        milkGlass.x + milkGlass.width / 2,
+                        milkGlass.y + milkGlass.height / 2,
+                        particleCount
+                    );
+                    
+                    // Play sound
+                    this.playSound('dunk');
+                    
+                    // Remove milk glass
+                    this.milkGlasses.splice(i, 1);
+                    
+                    // Show streak message for significant streaks
+                    if (this.streak >= 5 && this.streak % 5 === 0 && UI && UI.showMessage) {
+                        UI.showMessage(`${this.streak}x STREAK! 🔥`, 1000);
+                    }
+                }
+            }
+            
+            // Update whisks with reduced collision checks on mobile
+            const checkEveryNthWhisk = isMobile ? 2 : 1; // Check every other whisk on mobile
+            for (let i = this.whisks.length - 1; i >= 0; i--) {
+                const whisk = this.whisks[i];
+                
+                // Update whisk
+                if (!whisk.update()) {
+                    // Remove if off screen
+                    this.whisks.splice(i, 1);
+                    continue;
+                }
+                
+                // Only check collision on some whisks when on mobile (performance optimization)
+                if (i % checkEveryNthWhisk === 0 && this.player && !this.invincible && this.checkCollision(this.player, whisk)) {
+                    // Check if shield is active
+                    if (this.shieldActive) {
+                        // Deactivate shield
+                        this.shieldActive = false;
+                        this.shieldTimer = 0;
+                        
+                        // Visual feedback
+                        this.screenShake = 10;
+                        this.flashEffect = 1;
+                        this.flashColor = 'rgba(0, 255, 255, 0.3)'; // Cyan for shield
+                        
+                        // Create shield break particles (fewer on mobile)
+                        const particleCount = isMobile ? 15 : 30;
+                        this.particles.createExplosion(
+                            this.player.x + this.player.width / 2,
+                            this.player.y + this.player.height / 2,
+                            '#00FFFF', // Cyan
+                            particleCount
+                        );
+                        
+                        if (UI && UI.showMessage) {
+                            UI.showMessage('🛡️ SHIELD ABSORBED HIT! 🛡️', 1000);
+                        }
+                    } else {
+                        // Lose a life
+                        this.loseLife();
+                        
+                        // Create chocolate chip particles at collision point (fewer on mobile)
+                        const particleCount = isMobile ? 10 : 20;
+                        this.createChocolateChips(
+                            this.player.x + this.player.width / 2,
+                            this.player.y + this.player.height / 2,
+                            particleCount
+                        );
+                        
+                        // Visual feedback
+                        this.screenShake = 15;
+                        this.flashEffect = 1;
+                        this.flashColor = 'rgba(255, 0, 0, 0.2)';
+                    }
+                    
+                    // Break out of loop after first collision
+                    break;
+                }
+                
+                // Count whisks passed
+                if (whisk.x + whisk.width < this.player.x && !whisk.counted) {
+                    whisk.counted = true;
+                    this.stats.whisksPassed++;
+                }
+            }
+            
+            // Update powerups with reduced checks on mobile
+            for (let i = this.powerups.length - 1; i >= 0; i--) {
+                const powerup = this.powerups[i];
+                
+                // Update powerup
+                if (!powerup.update()) {
+                    // Remove if off screen
+                    this.powerups.splice(i, 1);
+                    continue;
+                }
+                
+                // Check collision with player
+                if (this.player && this.checkCollision(this.player, powerup)) {
+                    // Activate powerup
+                    this.activatePowerup(powerup.type);
+                    
+                    // Update powerups collected stat
+                    this.stats.powerupsCollected++;
+                    
+                    // Create particles (fewer on mobile)
+                    const particleCount = isMobile ? 10 : 20;
+                    this.particles.createExplosion(
+                        powerup.x + powerup.width / 2,
+                        powerup.y + powerup.height / 2,
+                        powerup.color,
+                        particleCount
+                    );
+                    
+                    // Play sound
+                    this.playSound('powerup');
+                    
+                    // Remove powerup
+                    this.powerups.splice(i, 1);
+                }
+            }
+            
+            // Spawn game objects less frequently on mobile
+            const spawnRateDivisor = isMobile ? 1.5 : 1;
+            
+            // Spawn milk glasses
+            if (Math.random() < CONFIG.MILK_GLASS_SPAWN_RATE / spawnRateDivisor) {
+                // Check if there's enough space between the last milk glass and the new one
+                const canSpawn = this.milkGlasses.length === 0 || 
+                    (this.milkGlasses[this.milkGlasses.length - 1].x < 
+                    this.canvas.width - CONFIG.MILK_GLASS_SPACING);
+                
+                if (canSpawn) {
+                    this.spawnMilkGlass();
+                }
+            }
+            
+            // Spawn whisks
+            if (Math.random() < CONFIG.PIPE_SPAWN_RATE / spawnRateDivisor) {
+                // Check if there's enough space between the last whisk and the new one
+                const canSpawn = this.whisks.length === 0 || 
+                    (this.whisks[0].x < this.canvas.width - CONFIG.PIPE_SPACING);
+                
+                if (canSpawn) {
+                    this.spawnWhisks();
+                }
+            }
+            
+            // Spawn powerups less frequently
+            if (Math.random() < CONFIG.POWERUP_SPAWN_RATE / (isMobile ? 2 : 1)) {
+                this.spawnPowerup();
+            }
+            
+            // Update particles
+            this.particles.update();
+            
+            // Add fire trail in fire mode (less frequently on mobile)
+            if (this.fireMode && this.player) {
+                if (!isMobile || Math.random() < 0.5) {
+                    this.particles.createTrail(
+                        this.player.x,
+                        this.player.y + this.player.height/2,
+                        '#FF5500'
+                    );
+                }
+            }
+        } catch (error) {
+            console.error('Error in update method:', error.message || error);
         }
     }
 }

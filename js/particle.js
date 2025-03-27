@@ -34,6 +34,9 @@ class Particle {
     
     // Draw particle
     draw(ctx) {
+        // Skip drawing if almost invisible
+        if (this.alpha < 0.05) return;
+        
         ctx.save();
         
         // Set alpha
@@ -53,21 +56,46 @@ class Particle {
 class ParticleSystem {
     constructor() {
         this.particles = [];
+        this.maxParticles = 200; // Limit total particles for performance
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
     
     // Update all particles
     update() {
+        // Only update every other frame on mobile for performance
+        if (this.isMobile && Math.random() < 0.5) {
+            return;
+        }
+        
         this.particles = this.particles.filter(particle => particle.update());
     }
     
     // Draw all particles
     draw(ctx) {
-        this.particles.forEach(particle => particle.draw(ctx));
+        // On mobile, draw fewer particles
+        const particlesToDraw = this.isMobile ? 
+            this.particles.filter((_, i) => i % 2 === 0) : // Draw every other particle on mobile
+            this.particles;
+            
+        particlesToDraw.forEach(particle => particle.draw(ctx));
     }
     
     // Create a splash effect (for milk glass dunks)
-    createSplash(x, y, color, count = 15) {
-        count = count || 15; // Default to 15 particles if count is not provided
+    createSplash(x, y, count = 15) {
+        // Reduce particles if we're near the limit
+        if (this.particles.length > this.maxParticles * 0.8) {
+            count = Math.floor(count / 2);
+        }
+        
+        // Reduce further on mobile
+        if (this.isMobile) {
+            count = Math.floor(count / 2);
+        }
+        
+        // Ensure at least a few particles
+        count = Math.max(count, 5);
+        
+        const color = '#FFFFFF'; // White for milk
         
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -77,14 +105,30 @@ class ParticleSystem {
             const radius = 2 + Math.random() * 3;
             const lifespan = 30 + Math.random() * 30;
             
-            this.particles.push(new Particle(
-                x, y, vx, vy, radius, color, lifespan
-            ));
+            // Add particle if we're under the limit
+            if (this.particles.length < this.maxParticles) {
+                this.particles.push(new Particle(
+                    x, y, vx, vy, radius, color, lifespan
+                ));
+            }
         }
     }
     
     // Create an explosion effect (for collisions)
     createExplosion(x, y, color, count) {
+        // Reduce particles if we're near the limit
+        if (this.particles.length > this.maxParticles * 0.8) {
+            count = Math.floor(count / 2);
+        }
+        
+        // Reduce further on mobile
+        if (this.isMobile) {
+            count = Math.floor(count / 2);
+        }
+        
+        // Ensure at least a few particles
+        count = Math.max(count, 5);
+        
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 2 + Math.random() * 4;
@@ -93,15 +137,26 @@ class ParticleSystem {
             const radius = 2 + Math.random() * 4;
             const lifespan = 40 + Math.random() * 20;
             
-            this.particles.push(new Particle(
-                x, y, vx, vy, radius, color, lifespan
-            ));
+            // Add particle if we're under the limit
+            if (this.particles.length < this.maxParticles) {
+                this.particles.push(new Particle(
+                    x, y, vx, vy, radius, color, lifespan
+                ));
+            }
         }
     }
     
     // Create a trail effect (for fire mode)
     createTrail(x, y, color) {
-        for (let i = 0; i < 3; i++) {
+        // Skip creating trail particles if we're near the limit
+        if (this.particles.length > this.maxParticles * 0.9) {
+            return;
+        }
+        
+        // On mobile, create fewer trail particles
+        const particleCount = this.isMobile ? 1 : 3;
+        
+        for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 0.5 + Math.random() * 1;
             const vx = Math.cos(angle) * speed;
@@ -109,9 +164,12 @@ class ParticleSystem {
             const radius = 1 + Math.random() * 2;
             const lifespan = 20 + Math.random() * 10;
             
-            this.particles.push(new Particle(
-                x, y, vx, vy, radius, color, lifespan
-            ));
+            // Add particle if we're under the limit
+            if (this.particles.length < this.maxParticles) {
+                this.particles.push(new Particle(
+                    x, y, vx, vy, radius, color, lifespan
+                ));
+            }
         }
     }
 }

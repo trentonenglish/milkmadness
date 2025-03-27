@@ -9,6 +9,10 @@ const CONFIG = {
     MAX_VELOCITY: 4,
     TERMINAL_VELOCITY: 3,
     
+    // Mobile detection and settings
+    IS_MOBILE: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+    MOBILE_PERFORMANCE_MODE: true, // Enable mobile optimizations
+    
     // Player settings
     COOKIE_WIDTH: 50,
     COOKIE_HEIGHT: 50,
@@ -56,6 +60,11 @@ const CONFIG = {
     SOUND_VOLUME: 0.5,
     MUSIC_VOLUME: 0.3,
     
+    // Performance settings
+    MAX_PARTICLES: 200,
+    PARTICLE_LIMIT_MOBILE: 100,
+    SKIP_FRAMES_MOBILE: 1, // Skip every other frame on mobile
+    
     // Firebase config (to be replaced with actual config)
     FIREBASE_CONFIG: {
         apiKey: "YOUR_API_KEY",
@@ -64,6 +73,11 @@ const CONFIG = {
         storageBucket: "your-app.appspot.com",
         messagingSenderId: "your-messaging-sender-id",
         appId: "your-app-id"
+    },
+    
+    // Helper function to get mobile-adjusted values
+    getMobileAdjustedValue: function(desktopValue, mobileValue) {
+        return (this.IS_MOBILE && this.MOBILE_PERFORMANCE_MODE) ? mobileValue : desktopValue;
     }
 };
 
