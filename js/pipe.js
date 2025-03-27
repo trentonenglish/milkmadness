@@ -6,20 +6,10 @@ class Pipe {
         this.width = width;
         this.height = height;
         this.isTop = isTop; // Whether this is a top or bottom egg beater
+        this.counted = false; // Track if this pipe has been counted for score
         
-        // Load whisk image
-        this.image = new Image();
-        this.image.src = 'images/whisk.png';
-        // Try alternate path if the first one fails
-        this.image.onerror = () => {
-            console.log('Failed to load whisk image, trying alternate path');
-            this.image.src = 'Images/whisk.png';
-        };
+        // We'll use the whisk image from the ASSETS manager
         this.imageLoaded = false;
-        this.image.onload = () => {
-            console.log('Whisk image loaded successfully');
-            this.imageLoaded = true;
-        };
     }
     
     update() {
@@ -33,13 +23,17 @@ class Pipe {
     draw(ctx) {
         ctx.save();
         
+        // Get the whisk image from the ASSETS manager
+        const whiskImage = ASSETS.getWhiskImage();
+        this.imageLoaded = whiskImage && whiskImage.complete;
+        
         if (this.imageLoaded) {
             if (this.isTop) {
                 // Top whisk - draw upside down
                 ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
                 ctx.rotate(Math.PI); // Rotate 180 degrees
                 ctx.drawImage(
-                    this.image,
+                    whiskImage,
                     -this.width / 2,
                     -this.height / 2,
                     this.width,
@@ -48,7 +42,7 @@ class Pipe {
             } else {
                 // Bottom whisk - draw normally
                 ctx.drawImage(
-                    this.image,
+                    whiskImage,
                     this.x,
                     this.y,
                     this.width,

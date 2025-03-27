@@ -10,11 +10,13 @@ const ASSETS = {
     
     // Load all game assets
     loadAssets(callback) {
-        // Define image assets
+        // Define image assets with fallback paths
         const imageAssets = {
-            'cookie': 'Images/choco chip (1).png',
-            'defender': 'Images/monster 1.png',
-            'logo': 'Images/Logo Mark Color (3).png'
+            'cookie': ['images/choco chip (1).png', 'Images/choco chip (1).png'],
+            'defender': ['images/monster 1.png', 'Images/monster 1.png'],
+            'logo': ['images/Logo Mark Color (3).png', 'Images/Logo Mark Color (3).png'],
+            'whisk': ['images/whisk.png', 'Images/whisk.png'],
+            'background': ['images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png', 'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png']
         };
         
         // Define sound assets with paths to the sound files
@@ -36,8 +38,8 @@ const ASSETS = {
         console.log(`Loading ${this.totalAssets} assets...`);
         
         // Load images
-        for (const [key, src] of Object.entries(imageAssets)) {
-            this.loadImage(key, src);
+        for (const [key, paths] of Object.entries(imageAssets)) {
+            this.loadImageWithFallback(key, paths);
         }
         
         // Load sounds
@@ -55,23 +57,43 @@ const ASSETS = {
         }, 100);
     },
     
-    // Load image asset
-    loadImage(key, src) {
-        console.log(`Loading image: ${src}`);
+    // Load image asset with fallback paths
+    loadImageWithFallback(key, paths) {
+        console.log(`Loading image: ${key} with paths:`, paths);
         const img = new Image();
+        let pathIndex = 0;
+        
+        const tryNextPath = () => {
+            if (pathIndex >= paths.length) {
+                console.error(`Failed to load image ${key} after trying all paths`);
+                this.loadedAssets++;
+                return;
+            }
+            
+            const src = paths[pathIndex];
+            console.log(`Trying path ${pathIndex + 1}/${paths.length}: ${src}`);
+            img.src = src;
+            pathIndex++;
+        };
         
         img.onload = () => {
-            console.log(`Image loaded: ${src}`);
+            console.log(`Image loaded: ${key} from ${img.src}`);
             this.loadedAssets++;
         };
         
         img.onerror = () => {
-            console.error(`Failed to load image: ${src}`);
-            this.loadedAssets++;
+            console.error(`Failed to load image: ${img.src}, trying next path...`);
+            tryNextPath();
         };
         
-        img.src = src;
+        // Start with first path
+        tryNextPath();
         this.images[key] = img;
+    },
+    
+    // Load image asset (legacy method)
+    loadImage(key, src) {
+        return this.loadImageWithFallback(key, Array.isArray(src) ? src : [src]);
     },
     
     // Load sound asset
@@ -103,104 +125,82 @@ const ASSETS = {
             sound.src = src;
             this.sounds[key] = sound;
         } catch (e) {
-            console.error(`Error setting sound source: ${e.message}`);
-            this.sounds[key] = new Audio(); // Create empty audio object
+            console.error(`Error setting sound source: ${e}`);
             this.loadedAssets++;
         }
     },
     
     // Play sound
-    playSound(key, loop = false) {
+    playSound(key, volume = 1.0, loop = false) {
         if (!this.sounds[key]) {
             console.warn(`Sound not found: ${key}`);
-            return null;
+            return;
         }
         
         try {
-            // Create a new instance for overlapping sounds
-            const sound = this.sounds[key].cloneNode();
-            sound.loop = loop;
-            sound.volume = 0.5; // Set a reasonable volume
+            // Create a new Audio instance from the original
+            const soundInstance = new Audio();
+            soundInstance.src = this.sounds[key].src;
+            
+            // Set volume and loop
+            soundInstance.volume = volume;
+            soundInstance.loop = loop;
             
             // Play the sound
-            const playPromise = sound.play();
+            soundInstance.play().catch(e => {
+                console.warn(`Error playing sound ${key}: ${e}`);
+            });
             
-            // Handle play promise (might be rejected if user hasn't interacted with the page)
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.warn(`Sound play failed (${key}): ${error}`);
-                });
-            }
-            
-            return sound;
+            return soundInstance;
         } catch (e) {
-            console.error(`Error playing sound ${key}: ${e.message}`);
-            return null;
+            console.error(`Error playing sound ${key}: ${e}`);
         }
     },
     
     // Stop sound
     stopSound(sound) {
-        if (sound && typeof sound.pause === 'function') {
-            try {
-                sound.pause();
-                sound.currentTime = 0;
-            } catch (e) {
-                console.error(`Error stopping sound: ${e.message}`);
-            }
+        if (!sound) return;
+        
+        try {
+            sound.pause();
+            sound.currentTime = 0;
+        } catch (e) {
+            console.error(`Error stopping sound: ${e}`);
         }
     },
     
     // Draw cookie
     drawCookie(ctx, x, y, width, height, rotation = 0) {
-        // Save context state
-        ctx.save();
-        
-        // Translate to center of cookie for rotation
-        ctx.translate(x + width/2, y + height/2);
-        ctx.rotate(rotation);
-        
-        // Draw cookie image if loaded
-        if (this.images['cookie'] && this.images['cookie'].complete) {
-            ctx.drawImage(
-                this.images['cookie'],
-                -width/2, -height/2,
-                width, height
-            );
-        } else {
-            // Fallback to drawn cookie
-            ctx.fillStyle = '#D2691E';
+        if (!this.images.cookie) {
+            // Fallback drawing if image isn't loaded
+            ctx.fillStyle = '#F5DEB3'; // Wheat color
             ctx.beginPath();
-            ctx.arc(0, 0, width/2, 0, Math.PI * 2);
+            ctx.arc(x + width/2, y + height/2, width/2, 0, Math.PI * 2);
             ctx.fill();
             
             // Add chocolate chips
-            ctx.fillStyle = '#3D1C02';
+            ctx.fillStyle = '#654321'; // Brown
             for (let i = 0; i < 5; i++) {
-                const chipX = (Math.random() - 0.5) * width * 0.6;
-                const chipY = (Math.random() - 0.5) * height * 0.6;
+                const chipX = x + Math.random() * width;
+                const chipY = y + Math.random() * height;
+                const chipSize = Math.random() * 5 + 2;
+                
                 ctx.beginPath();
-                ctx.arc(chipX, chipY, width * 0.1, 0, Math.PI * 2);
+                ctx.arc(chipX, chipY, chipSize, 0, Math.PI * 2);
                 ctx.fill();
             }
+            return;
         }
         
-        // Restore context state
-        ctx.restore();
+        // Draw the cookie image
+        ctx.drawImage(this.images.cookie, x, y, width, height);
     },
     
     // Draw defender (cookie monster)
     drawDefender(ctx, x, y, width, height) {
-        // Draw monster image if loaded
-        if (this.images['defender'] && this.images['defender'].complete) {
-            ctx.drawImage(
-                this.images['defender'],
-                x, y,
-                width, height
-            );
-        } else {
-            // Fallback to drawn monster
-            ctx.fillStyle = '#0077FF';
+        if (!this.images.defender) {
+            // Fallback drawing if image isn't loaded
+            ctx.fillStyle = '#0000FF'; // Blue
             ctx.fillRect(x, y, width, height);
             
             // Draw eyes
@@ -213,15 +213,29 @@ const ASSETS = {
             // Draw pupils
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc(x + width * 0.3, y + height * 0.3, width * 0.07, 0, Math.PI * 2);
-            ctx.arc(x + width * 0.7, y + height * 0.3, width * 0.07, 0, Math.PI * 2);
+            ctx.arc(x + width * 0.3, y + height * 0.3, width * 0.05, 0, Math.PI * 2);
+            ctx.arc(x + width * 0.7, y + height * 0.3, width * 0.05, 0, Math.PI * 2);
             ctx.fill();
             
             // Draw mouth
             ctx.beginPath();
-            ctx.arc(x + width/2, y + height * 0.7, width * 0.3, 0, Math.PI);
+            ctx.arc(x + width/2, y + height * 0.6, width * 0.3, 0, Math.PI);
             ctx.stroke();
+            return;
         }
+        
+        // Draw the defender image
+        ctx.drawImage(this.images.defender, x, y, width, height);
+    },
+    
+    // Get background image
+    getBackgroundImage() {
+        return this.images.background;
+    },
+    
+    // Get whisk image
+    getWhiskImage() {
+        return this.images.whisk;
     }
 };
 

@@ -49,18 +49,8 @@ class Game {
         
         // Background
         this.backgroundX = 0;
-        this.backgroundImage = new Image();
-        this.backgroundImage.src = 'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png';
-        // Try alternate path if the first one fails
-        this.backgroundImage.onerror = () => {
-            console.log('Failed to load background image, trying alternate path');
-            this.backgroundImage.src = 'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png';
-        };
+        // We'll use the background image from the ASSETS manager
         this.backgroundLoaded = false;
-        this.backgroundImage.onload = () => {
-            console.log('Background image loaded successfully');
-            this.backgroundLoaded = true;
-        };
         
         // Particles
         this.particles = new ParticleSystem();
@@ -438,7 +428,7 @@ class Game {
                         // Visual feedback
                         this.screenShake = 15;
                         this.flashEffect = 1;
-                        this.flashColor = 'rgba(255, 0, 0, 0.2)'; // Red for damage
+                        this.flashColor = 'rgba(255, 0, 0, 0.2)';
                     }
                     
                     // Break out of loop after first collision
@@ -861,15 +851,28 @@ class Game {
     
     // Draw background
     drawBackground() {
-        if (this.backgroundLoaded) {
-            // Draw the background image
-            this.ctx.drawImage(
-                this.backgroundImage,
-                0, 0,
-                this.canvas.width, this.canvas.height
-            );
+        // Draw scrolling background
+        const backgroundImage = ASSETS.getBackgroundImage();
+        
+        if (backgroundImage && backgroundImage.complete) {
+            this.backgroundLoaded = true;
+            
+            // Calculate how many times to repeat the background
+            const repeatCount = Math.ceil(this.canvas.width / backgroundImage.width) + 1;
+            
+            // Draw repeated background images
+            for (let i = 0; i < repeatCount; i++) {
+                const x = (this.backgroundX + i * backgroundImage.width) % (backgroundImage.width * repeatCount) - backgroundImage.width;
+                this.ctx.drawImage(backgroundImage, x, 0, backgroundImage.width, this.canvas.height);
+            }
+            
+            // Scroll background
+            this.backgroundX -= CONFIG.SCROLL_SPEED * 0.5;
+            if (this.backgroundX <= -backgroundImage.width) {
+                this.backgroundX = 0;
+            }
         } else {
-            // Fallback gradient if image isn't loaded yet
+            // Fallback background if image not loaded
             const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
             gradient.addColorStop(0, '#87CEEB'); // Sky blue at top
             gradient.addColorStop(1, '#1E90FF'); // Deeper blue at bottom
