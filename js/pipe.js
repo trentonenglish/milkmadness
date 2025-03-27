@@ -10,8 +10,14 @@ class Pipe {
         // Load whisk image
         this.image = new Image();
         this.image.src = 'images/whisk.png';
+        // Try alternate path if the first one fails
+        this.image.onerror = () => {
+            console.log('Failed to load whisk image, trying alternate path');
+            this.image.src = 'Images/whisk.png';
+        };
         this.imageLoaded = false;
         this.image.onload = () => {
+            console.log('Whisk image loaded successfully');
             this.imageLoaded = true;
         };
     }

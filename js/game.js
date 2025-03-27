@@ -51,8 +51,14 @@ class Game {
         this.backgroundX = 0;
         this.backgroundImage = new Image();
         this.backgroundImage.src = 'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png';
+        // Try alternate path if the first one fails
+        this.backgroundImage.onerror = () => {
+            console.log('Failed to load background image, trying alternate path');
+            this.backgroundImage.src = 'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png';
+        };
         this.backgroundLoaded = false;
         this.backgroundImage.onload = () => {
+            console.log('Background image loaded successfully');
             this.backgroundLoaded = true;
         };
         
@@ -739,6 +745,43 @@ class Game {
         this.ctx.restore();
     }
     
+    // Draw magnet effect around player
+    drawMagnetEffect() {
+        const centerX = this.player.x + this.player.width/2;
+        const centerY = this.player.y + this.player.height/2;
+        const radius = 100;
+        
+        // Draw magnetic field
+        this.ctx.save();
+        
+        // Create gradient
+        const gradient = this.ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, radius
+        );
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+        gradient.addColorStop(0.5, 'rgba(173, 216, 230, 0.2)');
+        gradient.addColorStop(1, 'rgba(173, 216, 230, 0)');
+        
+        // Draw circle
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
+        
+        // Draw pulsing rings
+        const time = performance.now() / 1000;
+        const pulseRadius = 30 + Math.sin(time * 3) * 10;
+        
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+    }
+    
     // Draw floor (info box)
     drawFloor() {
         // Draw semi-transparent info box
@@ -883,49 +926,6 @@ class Game {
         this.ctx.shadowBlur = 0;
         
         this.ctx.restore();
-    }
-    
-    // Draw magnet effect around player
-    drawMagnetEffect() {
-        const centerX = this.player.x + this.player.width/2;
-        const centerY = this.player.y + this.player.height/2;
-        const radius = Math.max(this.player.width, this.player.height) * 1.2;
-        
-        // Draw magnetic field lines
-        this.ctx.strokeStyle = 'rgba(50, 205, 50, 0.5)'; // Semi-transparent lime green
-        this.ctx.lineWidth = 2;
-        
-        // Draw pulsing magnetic field
-        const pulseTime = Date.now() / 200; // Slower pulse
-        const pulseScale = 0.8 + Math.sin(pulseTime) * 0.2; // 0.6-1.0 range
-        
-        // Draw magnetic field circles
-        for (let i = 0; i < 3; i++) {
-            const circleRadius = radius * (0.5 + i * 0.25) * pulseScale;
-            this.ctx.beginPath();
-            this.ctx.arc(centerX, centerY, circleRadius, 0, Math.PI * 2);
-            this.ctx.stroke();
-        }
-        
-        // Draw N/S poles
-        this.ctx.fillStyle = '#FF0000'; // Red for N pole
-        this.ctx.beginPath();
-        this.ctx.arc(centerX + radius * 0.6, centerY, radius * 0.15, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        this.ctx.fillStyle = '#0000FF'; // Blue for S pole
-        this.ctx.beginPath();
-        this.ctx.arc(centerX - radius * 0.6, centerY, radius * 0.15, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Add glow effect
-        this.ctx.shadowColor = 'rgba(50, 205, 50, 0.8)';
-        this.ctx.shadowBlur = 10;
-        this.ctx.strokeStyle = 'rgba(50, 205, 50, 0.8)';
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        this.ctx.stroke();
-        this.ctx.shadowBlur = 0;
     }
     
     // Draw UI
