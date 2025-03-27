@@ -10,25 +10,57 @@ const ASSETS = {
     
     // Load all game assets
     loadAssets(callback) {
+        // Get the base URL for GitHub Pages
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        const repoName = 'milkmadness'; // Your repository name
+        const baseUrl = isGitHubPages ? `/${repoName}/` : '';
+        
+        console.log(`Loading assets with baseUrl: ${baseUrl}`);
+        
         // Define image assets with fallback paths
         const imageAssets = {
-            'cookie': ['Images/choco chip (1).png', 'images/choco chip (1).png'],
-            'defender': ['Images/monster 1.png', 'images/monster 1.png'],
-            'logo': ['Images/Logo Mark Color (3).png', 'images/Logo Mark Color (3).png'],
-            'whisk': ['Images/whisk.png', 'images/whisk.png'],
-            'background': ['Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png', 'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png']
+            'cookie': [
+                `${baseUrl}Images/choco chip (1).png`, 
+                `${baseUrl}images/choco chip (1).png`,
+                'Images/choco chip (1).png', 
+                'images/choco chip (1).png'
+            ],
+            'defender': [
+                `${baseUrl}Images/monster 1.png`, 
+                `${baseUrl}images/monster 1.png`,
+                'Images/monster 1.png', 
+                'images/monster 1.png'
+            ],
+            'logo': [
+                `${baseUrl}Images/Logo Mark Color (3).png`, 
+                `${baseUrl}images/Logo Mark Color (3).png`,
+                'Images/Logo Mark Color (3).png', 
+                'images/Logo Mark Color (3).png'
+            ],
+            'whisk': [
+                `${baseUrl}Images/whisk.png`, 
+                `${baseUrl}images/whisk.png`,
+                'Images/whisk.png', 
+                'images/whisk.png'
+            ],
+            'background': [
+                `${baseUrl}Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png`, 
+                `${baseUrl}images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png`,
+                'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png', 
+                'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png'
+            ]
         };
         
         // Define sound assets with paths to the sound files
         const soundAssets = {
-            'flap': 'sounds/flap.mp3',
-            'dunk': 'sounds/dunk.mp3',
-            'perfect': 'sounds/perfect.mp3',
-            'crumble': 'sounds/crumble.mp3',
-            'powerup': 'sounds/powerup.mp3',
-            'fire': 'sounds/fire.mp3',
-            'rejected': 'sounds/rejected.mp3',
-            'bgMusic': 'sounds/bgMusic.mp3'
+            'flap': `${baseUrl}sounds/flap.mp3`,
+            'dunk': `${baseUrl}sounds/dunk.mp3`,
+            'perfect': `${baseUrl}sounds/perfect.mp3`,
+            'crumble': `${baseUrl}sounds/crumble.mp3`,
+            'powerup': `${baseUrl}sounds/powerup.mp3`,
+            'fire': `${baseUrl}sounds/fire.mp3`,
+            'rejected': `${baseUrl}sounds/rejected.mp3`,
+            'bgMusic': `${baseUrl}sounds/bgMusic.mp3`
         };
         
         // Count total assets to load
