@@ -32,10 +32,10 @@ const ASSETS = {
                 'images/monster 1.png'
             ],
             'logo': [
-                `${baseUrl}Images/Logo Mark Color (3).png`, 
-                `${baseUrl}images/Logo Mark Color (3).png`,
-                'Images/Logo Mark Color (3).png', 
-                'images/Logo Mark Color (3).png'
+                `${baseUrl}Images/Logo Mark Color (3).svg`, 
+                `${baseUrl}images/Logo Mark Color (3).svg`,
+                'Images/Logo Mark Color (3).svg', 
+                'images/Logo Mark Color (3).svg'
             ],
             'whisk': [
                 `${baseUrl}Images/whisk.png`, 
@@ -44,10 +44,10 @@ const ASSETS = {
                 'images/whisk.png'
             ],
             'background': [
-                `${baseUrl}Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png`, 
-                `${baseUrl}images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png`,
-                'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png', 
-                'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png'
+                `${baseUrl}Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.svg`, 
+                `${baseUrl}images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.svg`,
+                'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.svg', 
+                'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.svg'
             ]
         };
         
