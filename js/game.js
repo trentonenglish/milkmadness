@@ -346,12 +346,12 @@ class Game {
                     // Increase score
                     this.score += points;
                     
-                    // Create particles
+                    // Create splash effect
                     this.particles.createSplash(
                         milkGlass.x + milkGlass.width / 2,
                         milkGlass.y + milkGlass.height / 2,
-                        10,
-                        '#FFFFFF'
+                        '#FFFFFF',
+                        15
                     );
                     
                     // Play sound
@@ -1167,7 +1167,6 @@ class Game {
                 this.particles.createSplash(
                     this.player.x + this.player.width / 2,
                     this.player.y + this.player.height,
-                    10,
                     '#FFD700'
                 );
             }

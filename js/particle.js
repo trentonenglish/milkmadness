@@ -66,7 +66,9 @@ class ParticleSystem {
     }
     
     // Create a splash effect (for milk glass dunks)
-    createSplash(x, y, color, count) {
+    createSplash(x, y, color, count = 15) {
+        count = count || 15; // Default to 15 particles if count is not provided
+        
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 1 + Math.random() * 3;
