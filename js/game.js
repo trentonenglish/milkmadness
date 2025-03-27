@@ -48,8 +48,6 @@ class Game {
         this.clickVelocity = CONFIG.FLAP_POWER;
         
         // Background
-        this.backgroundX = 0;
-        // We'll use the background image from the ASSETS manager
         this.backgroundLoaded = false;
         
         // Particles
@@ -508,12 +506,6 @@ class Game {
             // Update particles
             this.particles.update();
             
-            // Update background
-            this.backgroundX -= CONFIG.SCROLL_SPEED * 0.5;
-            if (this.backgroundX < -this.canvas.width) {
-                this.backgroundX = 0;
-            }
-            
             // Add fire trail in fire mode
             if (this.fireMode && this.player) {
                 this.particles.createTrail(
@@ -851,33 +843,23 @@ class Game {
     
     // Draw background
     drawBackground() {
-        // Draw scrolling background
+        // Draw static background
         const backgroundImage = ASSETS.getBackgroundImage();
         
         if (backgroundImage && backgroundImage.complete) {
             this.backgroundLoaded = true;
             
-            // Calculate how many times to repeat the background
-            const repeatCount = Math.ceil(this.canvas.width / backgroundImage.width) + 1;
-            
-            // Draw repeated background images
-            for (let i = 0; i < repeatCount; i++) {
-                const x = (this.backgroundX + i * backgroundImage.width) % (backgroundImage.width * repeatCount) - backgroundImage.width;
-                this.ctx.drawImage(backgroundImage, x, 0, backgroundImage.width, this.canvas.height);
-            }
-            
-            // Scroll background
-            this.backgroundX -= CONFIG.SCROLL_SPEED * 0.5;
-            if (this.backgroundX <= -backgroundImage.width) {
-                this.backgroundX = 0;
-            }
+            // Draw the background image to fill the canvas
+            this.ctx.drawImage(
+                backgroundImage,
+                0, 0,
+                this.canvas.width, this.canvas.height
+            );
         } else {
             // Fallback background if image not loaded
             const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-            gradient.addColorStop(0, '#87CEEB'); // Sky blue at top
-            gradient.addColorStop(1, '#1E90FF'); // Deeper blue at bottom
-            
-            // Fill background
+            gradient.addColorStop(0, '#87CEEB'); // Sky blue
+            gradient.addColorStop(1, '#E0F7FA'); // Light cyan
             this.ctx.fillStyle = gradient;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
