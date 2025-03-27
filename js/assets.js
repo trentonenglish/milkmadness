@@ -12,11 +12,11 @@ const ASSETS = {
     loadAssets(callback) {
         // Define image assets with fallback paths
         const imageAssets = {
-            'cookie': ['images/choco chip (1).png', 'Images/choco chip (1).png'],
-            'defender': ['images/monster 1.png', 'Images/monster 1.png'],
-            'logo': ['images/Logo Mark Color (3).png', 'Images/Logo Mark Color (3).png'],
-            'whisk': ['images/whisk.png', 'Images/whisk.png'],
-            'background': ['images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png', 'Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png']
+            'cookie': ['Images/choco chip (1).png', 'images/choco chip (1).png'],
+            'defender': ['Images/monster 1.png', 'images/monster 1.png'],
+            'logo': ['Images/Logo Mark Color (3).png', 'images/Logo Mark Color (3).png'],
+            'whisk': ['Images/whisk.png', 'images/whisk.png'],
+            'background': ['Images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png', 'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png']
         };
         
         // Define sound assets with paths to the sound files
