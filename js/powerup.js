@@ -22,6 +22,15 @@ class Powerup {
             'extralife': '#FF6347'   // Tomato Red
         };
         
+        // Flag to indicate if this powerup uses emoji
+        this.useEmoji = this.type === 'slowmo' || this.type === 'magnet';
+        
+        // Emoji for specific powerup types
+        this.emoji = {
+            'slowmo': '🕒',
+            'magnet': '🧲'
+        };
+        
         // Load images for powerups
         this.images = {};
         this.loadImages();
@@ -40,6 +49,11 @@ class Powerup {
         const types = ['multiplier', 'magnet', 'slowmo', 'shield', 'extralife'];
         
         types.forEach(type => {
+            // Skip image loading for emoji-based powerups
+            if ((type === 'slowmo' || type === 'magnet') && this.useEmoji) {
+                return;
+            }
+            
             this.images[type] = new Image();
             
             // Set appropriate image path based on powerup type
@@ -94,45 +108,39 @@ class Powerup {
         // Calculate pulse scale
         const pulseScale = 1 + Math.sin(this.pulseTimer) * this.pulseAmount;
         
-        // Translate to center for rotation
-        ctx.translate(this.x + this.width/2, this.y + this.height/2);
+        // Translate to center of powerup for rotation
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
         ctx.rotate(this.rotation);
+        
+        // Apply pulse scale
         ctx.scale(pulseScale, pulseScale);
         
-        // Draw powerup background (glowing circle)
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.width/2, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw glow effect
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
         
-        // Draw powerup border
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.width/2, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Draw powerup image if loaded
-        if (this.images[this.type] && this.images[this.type].complete) {
-            const imgSize = this.width * 0.7; // 70% of powerup size
+        if (this.useEmoji && this.emoji[this.type]) {
+            // Draw emoji for slowmo and magnet powerups
+            ctx.font = `${this.width * 0.8}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.emoji[this.type], 0, 0);
+        } else if (this.images[this.type]) {
+            // Draw image for other powerups
             ctx.drawImage(
                 this.images[this.type],
-                -imgSize/2,
-                -imgSize/2,
-                imgSize,
-                imgSize
+                -this.width / 2,
+                -this.height / 2,
+                this.width,
+                this.height
             );
         } else {
-            // Fallback to simple icon if image not loaded
-            this.drawFallbackIcon(ctx);
+            // Fallback to colored circle if image not available
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
+            ctx.fill();
         }
-        
-        // Add glow effect
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.width/2 + 5, 0, Math.PI * 2);
-        ctx.stroke();
         
         ctx.restore();
     }

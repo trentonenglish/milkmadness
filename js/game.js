@@ -48,8 +48,7 @@ class Game {
         this.clickVelocity = CONFIG.FLAP_POWER;
         
         // Background
-        this.backgroundLoaded = false;
-        this.backgroundImage = null;
+        this.backgroundX = 0;
         
         // Particles
         this.particles = new ParticleSystem();
@@ -299,8 +298,8 @@ class Game {
                     continue;
                 }
                 
-                // Check collision with player
-                if (this.player && this.checkCollision(this.player, milkGlass)) {
+                // Check collision with player using the milk glass's checkDunk method
+                if (this.player && milkGlass.checkDunk(this.player)) {
                     // Calculate points based on streak
                     let points = 5;
                     
@@ -352,7 +351,11 @@ class Game {
                     // Play sound
                     this.playSound('collect');
                     
-                    // Remove milk glass
+                    // Mark as scored but don't remove immediately to allow splash animation
+                    milkGlass.scored = true;
+                    
+                    // Remove milk glass from the array to prevent duplicates
+                    // It will still be visible and fade out because we've already marked it as scored
                     this.milkGlasses.splice(i, 1);
                     
                     // Spawn more milk glasses
@@ -822,87 +825,46 @@ class Game {
     
     // Draw background
     drawBackground() {
-        try {
-            // Get the background image from assets
-            if (!this.backgroundImage) {
-                this.backgroundImage = ASSETS.getBackgroundImage();
-            }
+        if (ASSETS && ASSETS.images && ASSETS.images.background) {
+            // Draw the background image
+            this.ctx.drawImage(
+                ASSETS.images.background,
+                0, 0,
+                this.canvas.width, this.canvas.height
+            );
+        } else {
+            // Fallback gradient if image isn't loaded yet
+            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            gradient.addColorStop(0, '#87CEEB'); // Sky blue at top
+            gradient.addColorStop(1, '#1E90FF'); // Deeper blue at bottom
             
-            if (this.backgroundImage && this.backgroundImage.complete) {
-                // Draw the background image to fill the canvas
-                this.ctx.drawImage(
-                    this.backgroundImage,
-                    0, 0,
-                    this.canvas.width, this.canvas.height
-                );
-                this.backgroundLoaded = true;
-            } else {
-                // Fallback background if image not loaded
-                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-                gradient.addColorStop(0, '#87CEEB'); // Sky blue
-                gradient.addColorStop(1, '#E0F7FA'); // Light cyan
-                this.ctx.fillStyle = gradient;
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            }
-        } catch (error) {
-            console.error('Error drawing background:', error.message || error);
-            
-            // Emergency fallback
-            this.ctx.fillStyle = '#87CEEB';
+            this.ctx.fillStyle = gradient;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
     // Draw game objects
     drawGameObjects() {
-        try {
-            // Draw particles
-            this.particles.draw(this.ctx);
-            
-            // Draw milk glasses
-            for (const milkGlass of this.milkGlasses) {
-                milkGlass.draw(this.ctx);
-            }
-            
-            // Draw whisks
-            for (const whisk of this.whisks) {
+        // Draw player with magnet effect if active
+        this.drawPlayer();
+        
+        // Draw milk glasses
+        this.milkGlasses.forEach(glass => glass.draw(this.ctx));
+        
+        // Draw whisks
+        this.whisks.forEach(whisk => {
+            try {
                 whisk.draw(this.ctx);
+            } catch (error) {
+                console.error('Error drawing whisk:', error);
+                // Fallback drawing if the whisk.draw method fails
+                this.ctx.fillStyle = '#8B4513'; // Brown color
+                this.ctx.fillRect(whisk.x, whisk.y, whisk.width, whisk.height);
             }
-            
-            // Draw powerups
-            for (const powerup of this.powerups) {
-                powerup.draw(this.ctx);
-            }
-            
-            // Draw player
-            if (this.player) {
-                this.drawPlayer();
-            }
-            
-            // Draw floor (info box)
-            this.drawFloor();
-            
-            // Draw powerup status if active
-            if (this.activePowerup) {
-                this.drawPowerupStatus();
-            }
-            
-            // Draw shield effect if active
-            if (this.shieldActive) {
-                this.drawShieldEffect();
-            }
-            
-            // Draw game state overlays
-            if (this.state === GAME_STATES.MENU) {
-                this.drawMenu();
-            } else if (this.state === GAME_STATES.GAME_OVER) {
-                this.drawGameOver();
-            } else if (this.state === GAME_STATES.PAUSED) {
-                this.drawPaused();
-            }
-        } catch (error) {
-            console.error('Error in drawGameObjects method:', error.message || error);
-        }
+        });
+        
+        // Draw powerups
+        this.powerups.forEach(powerup => powerup.draw(this.ctx));
     }
     
     // Draw player with magnet effect if active
