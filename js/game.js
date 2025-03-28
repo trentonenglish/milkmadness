@@ -49,12 +49,6 @@ class Game {
         
         // Background
         this.backgroundX = 0;
-        this.backgroundImage = new Image();
-        this.backgroundImage.src = 'images/ChatGPT Image Mar 26, 2025, 03_14_34 PM.png';
-        this.backgroundLoaded = false;
-        this.backgroundImage.onload = () => {
-            this.backgroundLoaded = true;
-        };
         
         // Particles
         this.particles = new ParticleSystem();
@@ -304,8 +298,8 @@ class Game {
                     continue;
                 }
                 
-                // Check collision with player
-                if (this.player && this.checkCollision(this.player, milkGlass)) {
+                // Check collision with player using the milk glass's checkDunk method
+                if (this.player && milkGlass.checkDunk(this.player)) {
                     // Calculate points based on streak
                     let points = 5;
                     
@@ -346,7 +340,7 @@ class Game {
                     // Increase score
                     this.score += points;
                     
-                    // Create particles
+                    // Also create particles from the particle system for additional effect
                     this.particles.createSplash(
                         milkGlass.x + milkGlass.width / 2,
                         milkGlass.y + milkGlass.height / 2,
@@ -357,7 +351,11 @@ class Game {
                     // Play sound
                     this.playSound('collect');
                     
-                    // Remove milk glass
+                    // Mark as scored but don't remove immediately to allow splash animation
+                    milkGlass.scored = true;
+                    
+                    // Remove milk glass from the array to prevent duplicates
+                    // It will still be visible and fade out because we've already marked it as scored
                     this.milkGlasses.splice(i, 1);
                     
                     // Spawn more milk glasses
@@ -818,10 +816,10 @@ class Game {
     
     // Draw background
     drawBackground() {
-        if (this.backgroundLoaded) {
+        if (ASSETS && ASSETS.images && ASSETS.images.background) {
             // Draw the background image
             this.ctx.drawImage(
-                this.backgroundImage,
+                ASSETS.images.background,
                 0, 0,
                 this.canvas.width, this.canvas.height
             );
@@ -843,10 +841,19 @@ class Game {
         this.drawPlayer();
         
         // Draw milk glasses
-        this.milkGlasses.forEach(milkGlass => milkGlass.draw(this.ctx));
+        this.milkGlasses.forEach(glass => glass.draw(this.ctx));
         
         // Draw whisks
-        this.whisks.forEach(whisk => whisk.draw(this.ctx));
+        this.whisks.forEach(whisk => {
+            try {
+                whisk.draw(this.ctx);
+            } catch (error) {
+                console.error('Error drawing whisk:', error);
+                // Fallback drawing if the whisk.draw method fails
+                this.ctx.fillStyle = '#8B4513'; // Brown color
+                this.ctx.fillRect(whisk.x, whisk.y, whisk.width, whisk.height);
+            }
+        });
         
         // Draw powerups
         this.powerups.forEach(powerup => powerup.draw(this.ctx));

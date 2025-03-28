@@ -7,220 +7,194 @@ const ASSETS = {
     // Total assets to load
     totalAssets: 0,
     loadedAssets: 0,
+    soundsEnabled: false, // Flag to track if sounds are enabled
     
     // Load all game assets
     loadAssets(callback) {
         // Define image assets
         const imageAssets = {
-            'cookie': 'Images/choco chip (1).png',
+            'cookie': 'images/playercookie.png',
             'defender': 'Images/monster 1.png',
-            'logo': 'Images/Logo Mark Color (3).png'
+            'logo': 'Images/Logo Mark Color (3).png',
+            'whisk': 'images/whisk.png',
+            'milkGlass': 'images/milk.png',
+            'background': 'images/backgroundimage.png'
         };
         
         // Define sound assets with paths to the sound files
         const soundAssets = {
-            'flap': 'sounds/flap.mp3',
-            'dunk': 'sounds/dunk.mp3',
-            'perfect': 'sounds/perfect.mp3',
-            'crumble': 'sounds/crumble.mp3',
-            'powerup': 'sounds/powerup.mp3',
-            'fire': 'sounds/fire.mp3',
-            'rejected': 'sounds/rejected.mp3',
+            'flap': 'sounds/flap.wav',
+            'dunk': 'sounds/dunk.wav',
+            'perfect': 'sounds/perfect.wav',
+            'crumble': 'sounds/crumble.wav',
+            'powerup': 'sounds/powerup.wav',
+            'fire': 'sounds/fire.wav',
+            'rejected': 'sounds/rejected.wav',
             'bgMusic': 'sounds/bgMusic.mp3'
         };
         
-        // Count total assets to load
-        this.totalAssets = Object.keys(imageAssets).length + Object.keys(soundAssets).length;
+        // Count total assets to load (only count images, sounds are optional)
+        this.totalAssets = Object.keys(imageAssets).length;
         this.loadedAssets = 0;
         
-        console.log(`Loading ${this.totalAssets} assets...`);
+        console.log(`Loading ${this.totalAssets} required assets...`);
         
         // Load images
         for (const [key, src] of Object.entries(imageAssets)) {
+            console.log(`Starting to load image: ${key} from ${src}`);
             this.loadImage(key, src);
         }
         
-        // Load sounds
-        for (const [key, src] of Object.entries(soundAssets)) {
-            this.loadSound(key, src);
+        // Try to load sounds but don't block game loading
+        try {
+            // Check if audio is supported
+            const audio = new Audio();
+            if (audio) {
+                this.soundsEnabled = true;
+                console.log('Sound is supported, loading sound assets...');
+                
+                // Load sounds but don't count them in the loading progress
+                for (const [key, src] of Object.entries(soundAssets)) {
+                    this.loadSound(key, src, false); // false = don't count in loading progress
+                }
+            } else {
+                console.warn('Audio not supported in this browser');
+            }
+        } catch (error) {
+            console.warn('Audio not supported, sounds will be disabled:', error);
+            this.soundsEnabled = false;
         }
         
         // Check if all assets are loaded
         const checkInterval = setInterval(() => {
+            console.log(`Loaded ${this.loadedAssets}/${this.totalAssets} required assets`);
+            
             if (this.loadedAssets >= this.totalAssets) {
                 clearInterval(checkInterval);
-                console.log('All assets loaded');
+                console.log('All required assets loaded');
                 callback();
             }
-        }, 100);
+        }, 1000);
     },
     
     // Load image asset
     loadImage(key, src) {
-        console.log(`Loading image: ${src}`);
+        console.log(`Loading image: ${key} from ${src}`);
         const img = new Image();
         
         img.onload = () => {
-            console.log(`Image loaded: ${src}`);
+            console.log(`Image loaded successfully: ${key}`);
+            this.images[key] = img;
             this.loadedAssets++;
         };
         
-        img.onerror = () => {
-            console.error(`Failed to load image: ${src}`);
+        img.onerror = (e) => {
+            console.error(`Failed to load image: ${key} from ${src}`, e);
             this.loadedAssets++;
         };
         
         img.src = src;
-        this.images[key] = img;
     },
     
     // Load sound asset
-    loadSound(key, src) {
+    loadSound(key, src, countInLoading = true) {
+        if (!this.soundsEnabled) {
+            if (countInLoading) this.loadedAssets++;
+            return;
+        }
+        
         console.log(`Loading sound: ${src}`);
-        const sound = new Audio();
-        
-        sound.addEventListener('canplaythrough', () => {
-            console.log(`Sound loaded: ${src}`);
-            this.loadedAssets++;
-        }, { once: true });
-        
-        sound.addEventListener('error', () => {
-            console.error(`Failed to load sound: ${src}. Creating empty audio object.`);
-            // Still count as loaded to avoid blocking the game
-            this.loadedAssets++;
-        });
-        
-        // Set a timeout in case the sound file doesn't trigger any events
-        setTimeout(() => {
-            if (!this.sounds[key] || this.sounds[key] !== sound) {
-                console.warn(`Sound loading timed out: ${src}`);
-                this.loadedAssets++;
-            }
-        }, 3000);
-        
-        // Try to load the sound
         try {
-            sound.src = src;
-            this.sounds[key] = sound;
-        } catch (e) {
-            console.error(`Error setting sound source: ${e.message}`);
-            this.sounds[key] = new Audio(); // Create empty audio object
-            this.loadedAssets++;
+            const audio = new Audio();
+            
+            audio.addEventListener('canplaythrough', () => {
+                console.log(`Sound loaded: ${src}`);
+                if (countInLoading) this.loadedAssets++;
+            }, { once: true });
+            
+            audio.addEventListener('error', () => {
+                console.error(`Failed to load sound: ${src}`);
+                if (countInLoading) this.loadedAssets++;
+            }, { once: true });
+            
+            audio.src = src;
+            this.sounds[key] = audio;
+        } catch (error) {
+            console.error(`Error creating audio element for ${src}:`, error);
+            if (countInLoading) this.loadedAssets++;
         }
     },
     
     // Play sound
     playSound(key, loop = false) {
-        if (!this.sounds[key]) {
-            console.warn(`Sound not found: ${key}`);
+        if (!this.soundsEnabled || !this.sounds[key]) {
             return null;
         }
         
         try {
-            // Create a new instance for overlapping sounds
+            // Create a new audio element for this playback
             const sound = this.sounds[key].cloneNode();
+            
+            // Set loop property
             sound.loop = loop;
-            sound.volume = 0.5; // Set a reasonable volume
             
             // Play the sound
             const playPromise = sound.play();
             
-            // Handle play promise (might be rejected if user hasn't interacted with the page)
+            // Handle play promise if supported
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    console.warn(`Sound play failed (${key}): ${error}`);
+                    console.error(`Error playing sound ${key}:`, error);
                 });
             }
             
+            // Return the sound element for control
             return sound;
-        } catch (e) {
-            console.error(`Error playing sound ${key}: ${e.message}`);
+        } catch (error) {
+            console.error(`Error playing sound ${key}:`, error);
             return null;
         }
     },
     
     // Stop sound
     stopSound(sound) {
-        if (sound && typeof sound.pause === 'function') {
-            try {
-                sound.pause();
-                sound.currentTime = 0;
-            } catch (e) {
-                console.error(`Error stopping sound: ${e.message}`);
-            }
+        if (!sound) return;
+        
+        try {
+            sound.pause();
+            sound.currentTime = 0;
+        } catch (error) {
+            console.error('Error stopping sound:', error);
         }
     },
     
     // Draw cookie
     drawCookie(ctx, x, y, width, height, rotation = 0) {
-        // Save context state
-        ctx.save();
-        
-        // Translate to center of cookie for rotation
-        ctx.translate(x + width/2, y + height/2);
-        ctx.rotate(rotation);
-        
-        // Draw cookie image if loaded
-        if (this.images['cookie'] && this.images['cookie'].complete) {
-            ctx.drawImage(
-                this.images['cookie'],
-                -width/2, -height/2,
-                width, height
-            );
-        } else {
-            // Fallback to drawn cookie
-            ctx.fillStyle = '#D2691E';
-            ctx.beginPath();
-            ctx.arc(0, 0, width/2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Add chocolate chips
-            ctx.fillStyle = '#3D1C02';
-            for (let i = 0; i < 5; i++) {
-                const chipX = (Math.random() - 0.5) * width * 0.6;
-                const chipY = (Math.random() - 0.5) * height * 0.6;
-                ctx.beginPath();
-                ctx.arc(chipX, chipY, width * 0.1, 0, Math.PI * 2);
-                ctx.fill();
-            }
+        if (this.images.cookie) {
+            ctx.save();
+            ctx.translate(x + width / 2, y + height / 2);
+            ctx.rotate(rotation);
+            ctx.drawImage(this.images.cookie, -width / 2, -height / 2, width, height);
+            ctx.restore();
         }
-        
-        // Restore context state
-        ctx.restore();
     },
     
     // Draw defender (cookie monster)
     drawDefender(ctx, x, y, width, height) {
-        // Draw monster image if loaded
-        if (this.images['defender'] && this.images['defender'].complete) {
+        if (this.images.defender) {
             ctx.drawImage(
-                this.images['defender'],
-                x, y,
-                width, height
+                this.images.defender,
+                x,
+                y,
+                width,
+                height
             );
         } else {
-            // Fallback to drawn monster
-            ctx.fillStyle = '#0077FF';
-            ctx.fillRect(x, y, width, height);
-            
-            // Draw eyes
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(x + width * 0.3, y + height * 0.3, width * 0.15, 0, Math.PI * 2);
-            ctx.arc(x + width * 0.7, y + height * 0.3, width * 0.15, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw pupils
-            ctx.fillStyle = 'black';
-            ctx.beginPath();
-            ctx.arc(x + width * 0.3, y + height * 0.3, width * 0.07, 0, Math.PI * 2);
-            ctx.arc(x + width * 0.7, y + height * 0.3, width * 0.07, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw mouth
-            ctx.beginPath();
-            ctx.arc(x + width/2, y + height * 0.7, width * 0.3, 0, Math.PI);
-            ctx.stroke();
+            // Fallback to emoji if image not available
+            ctx.font = `${height * 0.8}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('👾', x + width / 2, y + height / 2);
         }
     }
 };

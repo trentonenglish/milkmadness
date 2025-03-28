@@ -1,23 +1,42 @@
-// Egg Beater Class (Vertical obstacles)
+// Pipe Class (Vertical obstacles)
 class Pipe {
+    // Static class property to hold the image
+    static whiskImage = null;
+    static imageLoaded = false;
+    static loadingAttempted = false;
+    
     constructor(x, y, width, height, isTop) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
-        this.isTop = isTop; // Whether this is a top or bottom egg beater
+        this.isTop = isTop;
+        this.counted = false;
         
-        // Load whisk image
-        this.image = new Image();
-        this.image.src = 'images/whisk.png';
-        this.imageLoaded = false;
-        this.image.onload = () => {
-            this.imageLoaded = true;
-        };
+        // Initialize the static image only once
+        if (!Pipe.loadingAttempted) {
+            Pipe.loadingAttempted = true;
+            Pipe.whiskImage = new Image();
+            
+            // Log when the image is loaded
+            Pipe.whiskImage.onload = function() {
+                console.log('Whisk image loaded successfully!');
+                Pipe.imageLoaded = true;
+            };
+            
+            // Log if there's an error loading the image
+            Pipe.whiskImage.onerror = function(error) {
+                console.error('Error loading whisk image:', error);
+            };
+            
+            // Set the source last
+            Pipe.whiskImage.src = 'images/whisk.png';
+            console.log('Attempting to load whisk image from: images/whisk.png');
+        }
     }
     
     update() {
-        // Move egg beater left
+        // Move pipe left
         this.x -= CONFIG.SCROLL_SPEED;
         
         // Return false if off screen
@@ -25,41 +44,42 @@ class Pipe {
     }
     
     draw(ctx) {
-        ctx.save();
-        
-        if (this.imageLoaded) {
+        // Draw whisk using direct image if available
+        if (Pipe.imageLoaded && Pipe.whiskImage) {
+            ctx.save();
+            
             if (this.isTop) {
-                // Top whisk - draw upside down
+                // For top pipes, draw upside down
                 ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-                ctx.rotate(Math.PI); // Rotate 180 degrees
+                ctx.rotate(Math.PI);
                 ctx.drawImage(
-                    this.image,
+                    Pipe.whiskImage,
                     -this.width / 2,
                     -this.height / 2,
                     this.width,
                     this.height
                 );
             } else {
-                // Bottom whisk - draw normally
+                // For bottom pipes, draw normally
                 ctx.drawImage(
-                    this.image,
+                    Pipe.whiskImage,
                     this.x,
                     this.y,
                     this.width,
                     this.height
                 );
             }
+            
+            ctx.restore();
         } else {
-            // Fallback drawing if image isn't loaded yet
-            ctx.fillStyle = '#D0D0D0';
+            // Fallback to rectangle if image not available
+            ctx.fillStyle = '#8B4513'; // Brown color
             ctx.fillRect(this.x, this.y, this.width, this.height);
         }
-        
-        ctx.restore();
     }
     
     checkCollision(player) {
-        // Check if player collides with this egg beater
+        // Check if player collides with this pipe
         return (
             player.x < this.x + this.width &&
             player.x + player.width > this.x &&
@@ -69,5 +89,5 @@ class Pipe {
     }
 }
 
-// Export the Pipe class (still named Pipe for compatibility)
+// Export the Pipe class
 window.Pipe = Pipe;
